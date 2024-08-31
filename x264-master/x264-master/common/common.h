@@ -29,6 +29,7 @@
 
 #include "base.h"
 
+#define XING_TEST (1)
 /* Macros for templating function calls according to bit depth */
 #define x264_template(w) x264_glue3(x264, BIT_DEPTH, w)
 

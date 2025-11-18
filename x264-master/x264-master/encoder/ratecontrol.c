@@ -2014,7 +2014,7 @@ static double get_qscale(x264_t *h, ratecontrol_entry_t *rce, double rate_factor
     else
     {
         rcc->last_rceq = q;
-        q /= rate_factor;
+        q /= rate_factor; // rcc->wanted_bits_window / rcc->cplxr_sum
         rcc->last_qscale = q;
     }
 
@@ -2430,14 +2430,15 @@ static float rate_estimate_qscale( x264_t *h )
             q1 -= rcc->pb_offset/2;
 
         if( i0 && i1 )
-            q = (q0 + q1) / 2 + rcc->ip_offset;
+            q = (q0 + q1) / 2 + rcc->ip_offset;  //都是I帧，前后帧的q_scale均值+offset
         else if( i0 )
-            q = q1;
+            q = q1;   //和I帧保持一致
         else if( i1 )
-            q = q0;
+            q = q0;   //和I帧保持一致
         else
-            q = (q0*dt1 + q1*dt0) / (dt0 + dt1);
+            q = (q0*dt1 + q1*dt0) / (dt0 + dt1);   //  前后都是p帧，利用p帧的qp以及距离加权和
 
+        //添加偏移值
         if( h->fenc->b_kept_as_ref )
             q += rcc->pb_offset/2;
         else
@@ -2445,6 +2446,8 @@ static float rate_estimate_qscale( x264_t *h )
 
         rcc->qp_novbv = q;
         q = qp2qscale( q );
+
+        //利用satd预测size
         if( rcc->b_2pass )
             rcc->frame_size_planned = qscale2bits( &rce, q );
         else

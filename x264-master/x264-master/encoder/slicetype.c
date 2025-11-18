@@ -1035,14 +1035,20 @@ static void macroblock_tree_finish( x264_t *h, x264_frame_t *frame, float averag
 
     /* Allow the strength to be adjusted via qcompress, since the two
      * concepts are very similar. */
+    /*f_qcompress [0~1]。
+    为0时，表示ABR，即QP可以随意调节，QP可调整范围大，strength就大
+    为0，表示CBR，QP可调整范围小，strength就小*/
     float strength = 5.0f * (1.0f - h->param.rc.f_qcompress);
     for( int mb_index = 0; mb_index < h->mb.i_mb_count; mb_index++ )
     {
         int intra_cost = (frame->i_intra_cost[mb_index] * frame->i_inv_qscale_factor[mb_index] + 128) >> 8;
         if( intra_cost )
         {
+            /*fps_factor越大，表示当前帧停留时间越久，当前帧的信息越重要*/
             int propagate_cost = (frame->i_propagate_cost[mb_index] * fps_factor + 128) >> 8;
+            /*log曲线，符合人眼感知分布*/
             float log2_ratio = x264_log2(intra_cost + propagate_cost) - x264_log2(intra_cost) + weightdelta;
+            /*mbtree是在ap调节的基础上，进一步调节*/
             frame->f_qp_offset[mb_index] = frame->f_qp_offset_aq[mb_index] - strength * log2_ratio;
         }
     }

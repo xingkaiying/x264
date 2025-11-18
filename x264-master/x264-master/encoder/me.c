@@ -1353,3 +1353,69 @@ void x264_me_refine_qpel_rd( x264_t *h, x264_me_t *m, int i_lambda2, int i4, int
     x264_macroblock_cache_mvd( h, block_idx_x[i4], block_idx_y[i4], bw>>2, bh>>2, i_list, amvd );
     h->mb.b_skip_mc = 0;
 }
+
+
+
+
+#include <vector>
+#include <climits>
+#include <utility>
+
+using namespace std;
+
+pair<int, int> find_best_mv(
+	const vector<vector<int>>& curr_block,
+	const vector<vector<int>>& ref,
+	int cx,
+	int cy,
+	int search_range
+) {
+	int H = ref.size();
+	int W = ref[0].size();
+	int min_sad = INT_MAX;
+	int best_x = cx;  // 初始化为中心位置
+	int best_y = cy; 
+
+	// 确定搜索边界
+	int x_start = max(0, cx - search_range);
+	int x_end = min(W - 4, cx + search_range);
+	int y_start = max(0, cy - search_range);
+	int y_end = min(H - 4, cy + search_range);
+
+	for (int y = y_start; y <= y_end; ++y) {
+		for (int x = x_start; x <= x_end; ++x) {
+			int sad = 0;
+			// 计算当前候选块与当前块的SAD
+			for (int i = 0; i < 4; ++i) {
+				for (int j = 0; j < 4; ++j) {
+					sad += abs(curr_block[i][j] - ref[y + i][x + j]);
+				}
+			}
+
+			if (sad < min_sad) {
+				min_sad = sad;
+				best_x = x;
+				best_y = y;
+			}
+			else if (sad == min_sad) {
+				// 若SAD相同，选择字典序较小的运动矢量
+				int mv_x_candidate = x - cx;
+				int mv_y_candidate = y - cy;
+				int current_mv_x = best_x - cx;
+				int current_mv_y = best_y - cy;
+
+				if (mv_x_candidate < current_mv_x ||
+					(mv_x_candidate == current_mv_x && mv_y_candidate < current_mv_y)) {
+					best_x = x;
+					best_y = y;
+				}
+			}
+		}
+	}
+
+	// 计算运动矢量差值
+	int mv_x = best_x - cx;
+	int mv_y = best_y - cy;
+
+	return make_pair(mv_x, mv_y);
+}

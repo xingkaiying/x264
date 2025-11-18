@@ -513,9 +513,10 @@ static void mbtree_propagate_cost( int16_t *dst, uint16_t *propagate_in, uint16_
     {
         int intra_cost = intra_costs[i];
         int inter_cost = X264_MIN(intra_costs[i], inter_costs[i] & LOWRES_COST_MASK);
-        float propagate_intra  = intra_cost * inv_qscales[i];
-        float propagate_amount = propagate_in[i] + propagate_intra*fps;
-        float propagate_num    = intra_cost - inter_cost;
+        /*inv_qscales和qp负相关。1）qp越大，intra概率越小，propagate_intra就越小；2）qp越大，编码质量越差，重要程度越低*/
+        float propagate_intra  = intra_cost * inv_qscales[i];   
+        float propagate_amount = propagate_in[i] + propagate_intra*fps;  /*fps_factor越大，表明当前帧duration越大，自然更重要，*/
+        float propagate_num    = intra_cost - inter_cost; /*差值越大，inter越小，表示越重要*/
         float propagate_denom  = intra_cost;
         dst[i] = X264_MIN((int)(propagate_amount * propagate_num / propagate_denom + 0.5f), 32767);
     }
